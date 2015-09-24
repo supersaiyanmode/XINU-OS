@@ -1,10 +1,8 @@
 #include <prodcons.h>
 
 void consumer(int count) {
-	while (n <= count) {
+	int i;
+	for (i = 0; i<= count; i++) {
 		kprintf("Consumed: %d\n", n);
-		if (n == count) {
-			break;
-		}
 	}
 }
