@@ -1,10 +1,13 @@
+#include <xinu.h>
 #include <prodcons.h>
 
 void producer(int count) {
 	int i = 0;
-	for (i=0; i<=count; i++) {
+	for (i = 1; i<=count; i++) {
+		wait(consumed);
 		n = i;
-		kprintf("Produced: %d\n", i);
+		printf("Produced: %d\n", i);
+		signal(produced);
 	}
 }
 

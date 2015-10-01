@@ -1,11 +1,13 @@
 #include <xinu.h>
 #include <stdio.h>
 #include <stddef.h>
-#include <prodcons.h>
 #include <stdlib.h>
 
+#include <prodcons.h>
 
 int n;
+
+sid32 produced, consumed;
 
 int parseNumber(char *str, int *ret, int max) {
 	if (strnlen(str, max + 1) > max) {
@@ -24,6 +26,13 @@ int parseNumber(char *str, int *ret, int max) {
 }
 
 shellcmd xsh_prodcons(int argc, char * argv[]) {
+	 if (argc == 2 && strncmp(argv[1], "--help", 7) == 0) {
+                printf("Usage: %s [Count]\n\n", argv[0]);
+                printf("Description:\n");
+                printf("\tprints output of producer consumer processes.\n");
+                return 0;
+        }
+
 	if (argc > 1 && argc != 2) {
 		fprintf(stderr, "%s: Expects only one parameter.\n", argv[0]);
 		return PRODCONS_EXIT_BAD_ARGS;
@@ -35,8 +44,17 @@ shellcmd xsh_prodcons(int argc, char * argv[]) {
 			return PRODCONS_EXIT_BAD_COUNT;
 		}
 	}
-	
-	resume(create(producer, 1024, 20, "producer", 1, count));
-	resume(create(consumer, 1024, 20, "consumer", 1, count));
+
+	produced = semcreate(0);
+	consumed = semcreate(1);
+
+	pid32 producer_pid = create(producer, 1024, 20, "producer", 1, count);
+	pid32 consumer_pid = create(consumer, 1024, 20, "consumer", 1, count);
+	resume(producer_pid);
+	resume(consumer_pid);
+
+	//wait(producer_pid);
+	//wait(consumer_pid);
+
 	return 0;
 }
