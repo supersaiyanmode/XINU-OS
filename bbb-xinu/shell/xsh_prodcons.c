@@ -5,7 +5,7 @@
 
 #include <prodcons.h>
 
-int n;
+volatile int n;
 
 sid32 produced, consumed;
 
@@ -29,7 +29,7 @@ shellcmd xsh_prodcons(int argc, char * argv[]) {
 	 if (argc == 2 && strncmp(argv[1], "--help", 7) == 0) {
                 printf("Usage: %s [Count]\n\n", argv[0]);
                 printf("Description:\n");
-                printf("\tprints output of producer consumer processes.\n");
+                printf("\tprints output of producer consumer processes upto count items. Assumes default of 2000.\n");
                 return 0;
         }
 
@@ -52,9 +52,6 @@ shellcmd xsh_prodcons(int argc, char * argv[]) {
 	pid32 consumer_pid = create(consumer, 1024, 20, "consumer", 1, count);
 	resume(producer_pid);
 	resume(consumer_pid);
-
-	//wait(producer_pid);
-	//wait(consumer_pid);
 
 	return 0;
 }

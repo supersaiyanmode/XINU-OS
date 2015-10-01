@@ -6,7 +6,7 @@ void producer(int count) {
 	for (i = 1; i<=count; i++) {
 		wait(consumed);
 		n = i;
-		printf("Produced: %d\n", i);
+		kprintf("Produced: %d\n", n);
 		signal(produced);
 	}
 }
