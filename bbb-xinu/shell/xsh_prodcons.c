@@ -1,9 +1,9 @@
-#include <xinu.h>
+#include <prodcons.h>
+
 #include <stdio.h>
 #include <stddef.h>
 #include <stdlib.h>
-
-#include <prodcons.h>
+#include <future.h>
 
 volatile int n;
 
@@ -26,32 +26,58 @@ int parseNumber(char *str, int *ret, int max) {
 }
 
 shellcmd xsh_prodcons(int argc, char * argv[]) {
-	 if (argc == 2 && strncmp(argv[1], "--help", 7) == 0) {
+	if (argc == 2 && strncmp(argv[1], "--help", 7) == 0) {
                 printf("Usage: %s [Count]\n\n", argv[0]);
                 printf("Description:\n");
                 printf("\tprints output of producer consumer processes upto count items. Assumes default of 2000.\n");
                 return 0;
         }
 
-	if (argc > 1 && argc != 2) {
-		fprintf(stderr, "%s: Expects only one parameter.\n", argv[0]);
+	if (argc > 3) {
+		fprintf(stderr, "%s: Expects only one mandatory parameter and one optional parameter.\n", argv[0]);
 		return PRODCONS_EXIT_BAD_ARGS;
 	}
 	int count = 2000;
+	int useFuture = 0;
 	if (argc == 2) {
 		if (!parseNumber(argv[1], &count, 9)) {
 			fprintf(stderr, "%s: Unable to parse number. It should not have any more than 9 numeric characters.\n", argv[0]);
 			return PRODCONS_EXIT_BAD_COUNT;
+		}
+	} else if (argc == 3) {
+		if (!parseNumber(argv[2], &count, 9)) {
+			fprintf(stderr, "%s: Unable to parse number. It should not have any more than 9 numeric characters.\n", argv[0]);
+			return PRODCONS_EXIT_BAD_COUNT;
+		}
+		if (strncmp(argv[1], "-f", 2)) {
+			fprintf(stderr, "%s: Expected '-f' as the only optional parameter", argv[0]);
+			return PRODCONS_EXIT_BAD_ARGS;
+		} else {
+			useFuture = 1;
 		}
 	}
 
 	produced = semcreate(0);
 	consumed = semcreate(1);
 
-	pid32 producer_pid = create(producer, 1024, 20, "producer", 1, count);
-	pid32 consumer_pid = create(consumer, 1024, 20, "consumer", 1, count);
-	resume(producer_pid);
-	resume(consumer_pid);
+	if (useFuture == 1) {
+		future *f1, *f2, *f3;
 
+		f1 = future_alloc(FUTURE_EXCLUSIVE);
+		f2 = future_alloc(FUTURE_EXCLUSIVE);
+		f3 = future_alloc(FUTURE_EXCLUSIVE);
+
+		resume( create(future_cons, 1024, 20, "fcons1", 1, f1) );
+		resume( create(future_prod, 1024, 20, "fprod1", 1, f1) );
+		resume( create(future_cons, 1024, 20, "fcons2", 1, f2) );
+		resume( create(future_prod, 1024, 20, "fprod2", 1, f2) );
+		resume( create(future_cons, 1024, 20, "fcons3", 1, f3) );
+		resume( create(future_prod, 1024, 20, "fprod3", 1, f3) );
+	} else {
+		pid32 producer_pid = create(producer, 1024, 20, "producer", 1, count);
+		pid32 consumer_pid = create(consumer, 1024, 20, "consumer", 1, count);
+		resume(producer_pid);
+		resume(consumer_pid);
+	}
 	return 0;
 }
