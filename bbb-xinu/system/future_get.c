@@ -13,7 +13,6 @@ syscall future_get(future* f, int* value) {
 	while (f->state != FUTURE_VALID);
 
 	*value = *(f->value);
-	printf("Returning a value of: %d\n", *value);
 
 	if (freemem((char*)f->value, sizeof(int)) == SYSERR) {
 		return SYSERR;
