@@ -40,8 +40,12 @@ shellcmd xsh_prodcons(int argc, char * argv[]) {
 	int count = 2000;
 	int useFuture = 0;
 	if (argc == 2) {
-		if (!parseNumber(argv[1], &count, 9)) {
-			fprintf(stderr, "%s: Unable to parse number. It should not have any more than 9 numeric characters.\n", argv[0]);
+		if (!strncmp(argv[1], "-f", 2)) {
+			useFuture = 1;
+		} else if (parseNumber(argv[1], &count, 9)) {
+			//nothing. Number updated in the condition itself.
+		} else {
+			fprintf(stderr, "%s: Expected either a number or a '-f'\n", argv[0]);
 			return PRODCONS_EXIT_BAD_COUNT;
 		}
 	} else if (argc == 3) {
