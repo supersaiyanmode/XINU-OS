@@ -10,6 +10,7 @@ syscall future_get(future* f, int* value) {
 	}
 
 	f->state = FUTURE_WAITING;
+	f->pid = getpid();
 	while (f->state != FUTURE_VALID);
 
 	*value = *(f->value);
@@ -19,7 +20,7 @@ syscall future_get(future* f, int* value) {
 	}
 
 	f->state = FUTURE_EMPTY;
-
+	f->pid = NULLPROC;
 	return OK;
 }
 
