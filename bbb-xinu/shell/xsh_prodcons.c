@@ -27,9 +27,10 @@ int parseNumber(char *str, int *ret, int max) {
 
 shellcmd xsh_prodcons(int argc, char * argv[]) {
 	if (argc == 2 && strncmp(argv[1], "--help", 7) == 0) {
-                printf("Usage: %s [Count]\n\n", argv[0]);
+                printf("Usage: %s [-f] [Count]\n\n", argv[0]);
                 printf("Description:\n");
                 printf("\tprints output of producer consumer processes upto count items. Assumes default of 2000.\n");
+                printf("\t-f flag makes use of Futures. This is optional.\n");
                 return 0;
         }
 
