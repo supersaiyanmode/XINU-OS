@@ -9,6 +9,9 @@ typedef struct CQueue {
 } CQueue;
 
 CQueue* queue_alloc(int size) {
+	if (size <= 0) {
+		return NULL;
+	}
 	int total_size = size * sizeof (QueueItem) + sizeof(CQueue);
 	CQueue *q = (CQueue*)getmem(total_size);
 	if ((char*)q == (char*)SYSERR) {
@@ -23,11 +26,15 @@ CQueue* queue_alloc(int size) {
 }
 
 syscall queue_free(CQueue* queue) {
+	if (queue == NULL)
+		return SYSERR;
 	int size = queue->total_mem_size;
 	return freemem((char*)queue, size);
 }
 
 int queue_push(CQueue* queue, QueueItem item) {
+	if (queue == NULL)
+		return 0;
 	if ((queue->front == 0 && queue->rear == queue->max_size -1)
 			|| (queue->rear + 1 == queue->front)) {
 		return 0;
@@ -45,6 +52,8 @@ int queue_push(CQueue* queue, QueueItem item) {
 }
 
 int queue_pop(CQueue* queue, QueueItem* item) {
+	if (queue == NULL)
+		return 0;
 	if (queue->front == -1) {
 		return 0;
 	}
@@ -61,6 +70,8 @@ int queue_pop(CQueue* queue, QueueItem* item) {
 }
 
 void queue_walk(CQueue* queue) {
+	if (queue == NULL)
+		return;
 	if (queue->front == -1)
 		return;
 	int i=queue->front;
