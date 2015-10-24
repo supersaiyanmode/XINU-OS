@@ -9,7 +9,7 @@ static syscall future_exclusive_get(future* f, int* value) {
 	f->state = FUTURE_WAITING;
 	f->pid = getpid();
 
-	while (f->state != FUTURE_VALID);
+	suspend(getpid());
 
 	*value = *(f->value);
 	f->state = FUTURE_EMPTY;

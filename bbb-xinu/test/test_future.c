@@ -58,7 +58,12 @@ shellcmd test_future(int argc, char** argv){
 	resume( create(future_cons_new, 1024, 20, "fcons11", 1, f_queue) );
 	resume( create(future_cons_new, 1024, 20, "fcons12", 1, f_queue) );
 	resume( create(future_prod_new, 1024, 20, "fprod3", 1, f_queue) );
+
 	resume( create(future_prod_new, 1024, 20, "fprod4", 1, f_queue) );
+	resume( create(future_prod_new, 1024, 20, "fprod4", 1, f_queue) );
+
+
+	resume( create(future_cons_new, 1024, 20, "fcons5", 1, f_queue) );
 	resume( create(future_prod_new, 1024, 20, "fprod5", 1, f_queue) );
 	resume( create(future_prod_new, 1024, 20, "fprod6", 1, f_queue) );
 #endif
