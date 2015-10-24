@@ -1,3 +1,4 @@
+#include <xinu.h>
 #include <future.h>
 #include <stdio.h>
 
@@ -19,6 +20,7 @@ static syscall future_shared_set(future* f, int* value) {
 	QueueItem proc;
 
 	while (queue_pop(f->get_queue, &proc)) {
+		printf("Resuming process: %d\n", proc.value);
 		resume(proc.value);
 	}
 	return OK;
@@ -36,6 +38,11 @@ static syscall future_queue_set(future* f, int* value) {
 		pid32 pid = getpid();
 		queue_push(f->set_queue, (QueueItem){pid});
 		suspend(pid);
+		if (queue_pop(f->get_queue, &proc)) {
+			resume(proc.value);
+		} else {
+			return SYSERR;
+		}
 	}
 	return OK;	
 }

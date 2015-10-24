@@ -1,7 +1,6 @@
 #ifndef __FUTURE__H__INCLUDED
 #define __FUTURE__H__INCLUDED
 
-#include <xinu.h>
 #include <cqueue.h>
 
 #define FUTURE_EMPTY		0

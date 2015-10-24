@@ -9,7 +9,8 @@ typedef struct {
 } testfn_t;
 
 const testfn_t test_functions[] = {
-	{test_cqueue, "cqueue"}	
+	{test_cqueue, "cqueue"},
+	{test_future, "future"},
 };
 
 shellcmd xsh_test(int argc, char * argv[]) {
@@ -24,6 +25,5 @@ shellcmd xsh_test(int argc, char * argv[]) {
 			return test_functions[i].testfn(argc-1, argv+1);
 		}
 	}
-
 	return -1;
 }

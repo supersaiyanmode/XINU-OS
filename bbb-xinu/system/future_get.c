@@ -1,3 +1,4 @@
+#include <xinu.h>
 #include <future.h>
 
 static syscall future_exclusive_get(future* f, int* value) {
@@ -25,7 +26,9 @@ static syscall future_shared_get(future* f, int* value) {
 		if (!queue_push(f->get_queue, (QueueItem){pid})) {
 			return SYSERR;
 		}
+		printf("Suspending process: %d\n", pid);
 		suspend(pid);
+		*value = *(f->value);
 		return OK;
 	}
 }
@@ -35,6 +38,7 @@ static syscall future_queue_get(future* f, int* value) {
 		*value = *(f->value);
 		QueueItem proc;
 		if (queue_pop(f->set_queue, &proc)) {
+			f->state = FUTURE_EMPTY;
 			resume(proc.value);
 			return OK;
 		} 
@@ -47,6 +51,9 @@ static syscall future_queue_get(future* f, int* value) {
 		return SYSERR;
 	}
 	suspend(pid);
+	*value = *(f->value);
+	f->state = FUTURE_EMPTY;
+	freemem(f->value, sizeof(int));
 	return OK;
 }
 

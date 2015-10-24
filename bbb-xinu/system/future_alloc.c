@@ -1,3 +1,4 @@
+#include <xinu.h>
 #include <future.h>
 
 future* future_alloc(int future_flag) {

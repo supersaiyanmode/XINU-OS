@@ -1,3 +1,4 @@
+#include <xinu.h>
 #include <future.h>
 
 uint32 future_cons(future *fut) {
