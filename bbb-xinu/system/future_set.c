@@ -7,6 +7,8 @@ static syscall future_exclusive_set(future* f, int* value) {
 		f->value = (int*)getmem(sizeof(int));
 		*(f->value) = *value;
 		f->state = FUTURE_VALID;
+
+		resume(f->pid);
 		return OK;
 	}
 	return SYSERR;
