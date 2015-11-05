@@ -4,6 +4,8 @@
 
 void	*minheap;	/* Start address of heap	*/
 void	*maxheap;	/* End address of heap		*/
+void	*heaptop;
+void	*stacktop;
 
 /*------------------------------------------------------------------------
  * meminit - Initialize the free memory list for BeagleBone Black
@@ -17,6 +19,10 @@ void	meminit(void)
 
 	minheap = (void *)&end;
 	maxheap = (void *)MAXADDR;
+
+	heaptop = (void *)minheap;
+	stacktop = (void *)maxheap;
+	
 
 	/* Initialize the memory list as one big block */
 
