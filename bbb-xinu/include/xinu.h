@@ -1,4 +1,5 @@
 /* xinu.h - include all system header files */
+#define USE_STANDARD_ALLOCATOR
 
 #include <kernel.h>
 #include <conf.h>

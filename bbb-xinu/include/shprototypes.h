@@ -81,3 +81,5 @@ extern 	shellcmd  xsh_prodcons	(int32, char *[]);
 extern 	shellcmd  xsh_reset	(int32, char *[]);
 
 extern 	shellcmd  xsh_test	(int32, char *[]);
+
+extern 	shellcmd  xsh_printfree	(int32, char *[]);
