@@ -32,8 +32,24 @@ void allocmem() {
 
 shellcmd xsh_printfree(int nargs, char *args[])
 {
+        if (nargs == 2 && strncmp(args[1], "--help", 7) == 0) {
+                printf("Usage: %s\n\n", args[0]);
+                printf("Description:\n");
+                printf("\tPrints a list of free memory blocks.\n");
+                return 0;
+        }
 
-   struct memblk *block;
+        /* Check argument count */
+
+        if (nargs >= 2) {
+                fprintf(stderr, "%s: too many arguments\n", args[0]);
+                fprintf(stderr, "Try '%s --help' for more information\n",
+                        args[0]);
+                return 1;
+        }
+	
+
+	struct memblk *block;
 
 	/* Output a heading for the free list */
 	allocmem();
