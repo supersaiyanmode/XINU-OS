@@ -70,7 +70,7 @@ pid32	create(
 		memptr--;
 	}
 	//kprintf("Written in %u locations\n", ssize);
-	uint32 len = 256;
+	/*uint32 len = 256;
         kprintf("Here are the top 256 bytes in the stack while creating\n");
         char* prstktop = (char *)(prptr->prstkbase - prptr->prstklen + sizeof(uint32));
         int items_in_row = 32;
@@ -78,7 +78,7 @@ pid32	create(
                 kprintf("%02x ", *prstktop++);
                 if ((len-1)%items_in_row == 0)
                         kprintf("\n");
-        }
+        }*/
 
 	memptr = NULL;
 

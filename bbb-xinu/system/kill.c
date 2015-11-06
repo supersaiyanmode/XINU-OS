@@ -5,6 +5,31 @@
 int32 enable_kprintf_kill = -1;
 #define STACK_INITIAL_BYTES 64
 
+int longest_increasing_sequence(char* ptr, int len, 
+		char **outptr, int *outlen) {
+	int max_len = 0;
+	char* max_start = ptr;
+
+	char *currun = ptr;
+	while (currun != ptr + len) {
+		char cur_char = *currun;
+		char* start_ptr = currun;
+		int cur_count = 0;
+		while (*currun == cur_char && currun != ptr+len) {
+			currun ++;
+			cur_count ++;
+		}
+
+		if (cur_count > max_len) {
+			max_len = cur_count;
+			max_start = start_ptr;
+		}
+	}
+	*outptr = max_start;
+	*outlen = max_len;
+	return 1;
+}
+
 /*------------------------------------------------------------------------
  *  kill  -  Kill a process and remove it from the system
  *------------------------------------------------------------------------
@@ -45,16 +70,25 @@ syscall	kill(
 
 		
 	uint32 len = 256;
-	kprintf("Here are the top 256 bytes in the stack while killing\n");
+	/*kprintf("Here are the top 256 bytes in the stack while killing\n");
 	prstktop = (char *)(prptr->prstkbase - prptr->prstklen + sizeof(uint32));
 	int items_in_row = 32;
 	for(; len>0; len--) {
 		kprintf("%02x ", *prstktop++);
 		if ((len-1)%items_in_row == 0)
 			kprintf("\n");
-	}
+	}*/
 		
-	kprintf("The total stack memory requested was %u and max consumed memory was %u\n", prptr->prstklen, lenconsumed); 
+	//kprintf("The total stack memory requested was %u and max consumed memory was %u\n", prptr->prstklen, lenconsumed); 
+
+
+	char *max_base;
+	int maxlen;
+	prstktop = (char *)(prptr->prstkbase - prptr->prstklen + sizeof(uint32));
+
+	longest_increasing_sequence(prstktop, prptr->prstklen - sizeof(uint32), &max_base, &maxlen);
+	lenconsumed = maxlen + (max_base - prstktop);
+	kprintf("Process exited. Total stack memory consumed: %d\n", prptr->prstklen - lenconsumed);
 	
 	freestk(prptr->prstkbase, prptr->prstklen);
 
