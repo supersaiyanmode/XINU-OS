@@ -1,7 +1,7 @@
 /* getmem.c - getmem */
 
 #include <xinu.h>
-uint32 enable_kprintf = -1;
+int32 enable_kprintf = -1;
 
 /*------------------------------------------------------------------------
  *  getmem  -  Allocate heap storage, returning lowest word address

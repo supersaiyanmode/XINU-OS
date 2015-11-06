@@ -1,6 +1,7 @@
 /* memory.h - roundmb, truncmb, freestk */
 
 #define	PAGE_SIZE	4096
+#define STACK_STUB_VALUE 0xFF
 
 /*----------------------------------------------------------------------
  * roundmb, truncmb - Round or truncate address to memory block size
@@ -26,8 +27,9 @@ extern	struct	memblk	memlist;	/* Head of free memory list	*/
 
 extern	void	*minheap;		/* Start of heap		*/
 extern	void	*maxheap;		/* Highest valid heap address	*/
+
 extern	void	*heaptop;
-extern	void 	*stacktop;		
+extern	void 	*stacktop;		 
 
 /* Added by linker */
 

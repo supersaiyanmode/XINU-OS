@@ -61,8 +61,28 @@ pid32	create(
 	/* Initialize stack as if the process was called		*/
 
 	*saddr = STACKMAGIC;
-	savsp = (uint32)saddr;
 
+	char *memptr;
+	uint32 size = ssize;
+	for(memptr = (char *)saddr - 1; size > 0; size--)
+	{
+		*memptr = STACK_STUB_VALUE;
+		memptr--;
+	}
+	//kprintf("Written in %u locations\n", ssize);
+	uint32 len = 256;
+        kprintf("Here are the top 256 bytes in the stack while creating\n");
+        char* prstktop = (char *)(prptr->prstkbase - prptr->prstklen + sizeof(uint32));
+        int items_in_row = 32;
+        for(; len>0; len--) {
+                kprintf("%02x ", *prstktop++);
+                if ((len-1)%items_in_row == 0)
+                        kprintf("\n");
+        }
+
+	memptr = NULL;
+
+	savsp = (uint32)saddr;
 	/* push arguments */
 	a = (uint32 *)(&nargs + 1);	/* start of args		*/
 	a += nargs -1;			/* last argument		*/
