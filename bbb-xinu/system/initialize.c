@@ -61,7 +61,7 @@ void	nulluser()
 	
 
 	/* Output Xinu memory layout */
-	free_mem = 0;
+	/*free_mem = 0;
 	for (memptr = memlist.mnext; memptr != NULL;
 						memptr = memptr->mnext) {
 		free_mem += memptr->mlength;
@@ -80,7 +80,7 @@ void	nulluser()
 		(uint32)&ebss - (uint32)&data);
 	kprintf("           [0x%08X to 0x%08X]\n\n",
 		(uint32)&data, (uint32)&ebss - 1);
-
+	*/
 	/* Enable interrupts */
 
 	enable();

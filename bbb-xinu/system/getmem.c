@@ -33,42 +33,11 @@ char  	*getmem(
 			
 		restore(mask);
 		
-		if(++enable_kprintf)
-			kprintf("Heaptop is now %u\n", (uint32)heaptop);
+		/*if(++enable_kprintf)
+			kprintf("Heaptop is now %u\n", (uint32)heaptop);*/
 
 		return (char *)memptr;
  	}
-	else
-	{
-	}
-		
-	/**
-	prev = &memlist;
-	curr = memlist.mnext;
-	while (curr != NULL) {				
-
-		if (curr->mlength == nbytes) {		
-			prev->mnext = curr->mnext;
-			memlist.mlength -= nbytes;
-			restore(mask);
-			return (char *)(curr);
-
-		} else if (curr->mlength > nbytes) {
-			leftover = (struct memblk *)((uint32) curr +
-					nbytes);
-			prev->mnext = leftover;
-			leftover->mnext = curr->mnext;
-			leftover->mlength = curr->mlength - nbytes;
-			memlist.mlength -= nbytes;
-		
-			restore(mask);
-			return (char *)(curr);
-		} else {			
-			prev = curr;
-			curr = curr->mnext;
-		}
-	}
-	*/
 
 	restore(mask);
 	return (char *)SYSERR;
