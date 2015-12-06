@@ -16,3 +16,4 @@ void consumer(int count) {
 	semdelete(produced);
 	semdelete(consumed);
 }
+

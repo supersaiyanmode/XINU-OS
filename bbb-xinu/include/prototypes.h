@@ -196,7 +196,7 @@ extern	void	eth_ntoh(struct netpacket *);
 
 /* in file netstart.c */
 
-extern	void	netstart(void);
+extern	void	netstart(char *,char *);
 
 /* in file kill.c */
 
