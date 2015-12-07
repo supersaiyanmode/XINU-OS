@@ -19,7 +19,7 @@ shellcmd xsh_udpecho(int nargs, char *args[])
 	int32	msglen;			/* length of outgoing message	*/
 	uint32	remoteip;		/* remote IP address to use	*/
 	//uint32	localip;		/* local IP address to use	*/
-	uint16	echoport= 7;		/* port number for UDP echo	*/
+	uint16	echoport= 8888;		/* port number for UDP echo	*/
 	uint16	locport	= 52743;	/* local port to use		*/
 	int32	retries	= 3;		/* number of retries		*/
 	int32	delay	= 2000;		/* reception delay in ms	*/
