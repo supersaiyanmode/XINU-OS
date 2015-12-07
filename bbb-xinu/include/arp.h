@@ -25,7 +25,7 @@
 #define	AR_RESOLVED	2		/* Entry is valid		*/
 #define AR_STALE	3		/* Entry has become stale	*/
 
-#define ARP_CACHE_TIMEOUT	60
+#define ARP_CACHE_TIMEOUT	300 	/* The timeout period for ARP cache entry */ 	
 #define ARP_DEFAULT_TIMESTAMP	0
 
 #pragma pack(2)
