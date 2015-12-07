@@ -50,26 +50,34 @@ static	void arp_dmp ()
 			continue;
 		}
 		switch(arptr->arstate) {
-		    case AR_PENDING:	printf("   PEND "); break;
-		    case AR_RESOLVED:	printf("   RESLV"); break;
-		    default:		printf("   ?????"); break;
-		}
-		if (arptr->arstate == AR_PENDING) {
-			printf("%4d ", arptr->arpid);
-		} else {
-			printf("     ");
-		}
-		printf("%3d.", (arptr->arpaddr & 0xFF000000) >> 24);
-		printf("%3d.", (arptr->arpaddr & 0x00FF0000) >> 16);
-		printf("%3d.", (arptr->arpaddr & 0x0000FF00) >> 8);
-		printf("%3d",  (arptr->arpaddr & 0x000000FF));
+			case AR_PENDING:	printf("   PEND "); break;
+			case AR_RESOLVED:	
+						//kprintf("Inside resolved\n");
 
-		printf(" %02X", arptr->arhaddr[0]);
-		for (j = 1; j < ARP_HALEN; j++) {
-			printf(":%02X", arptr->arhaddr[j]);
-		}
-		printf("\n");
+						//kprintf("Got utime as %u and timestamp is %u", clktime, arptimestamps[i].timestamp);
+						if((clktime - arptimestamps[i].timestamp) > ARP_CACHE_TIMEOUT)
+							printf("   STALE");
+						else
+							printf("   RESLV"); 
+		break;
+		default:		printf("   ?????"); break;
+	}
+	if (arptr->arstate == AR_PENDING) {
+		printf("%4d ", arptr->arpid);
+	} else {
+		printf("     ");
+	}
+	printf("%3d.", (arptr->arpaddr & 0xFF000000) >> 24);
+	printf("%3d.", (arptr->arpaddr & 0x00FF0000) >> 16);
+	printf("%3d.", (arptr->arpaddr & 0x0000FF00) >> 8);
+	printf("%3d",  (arptr->arpaddr & 0x000000FF));
+
+	printf(" %02X", arptr->arhaddr[0]);
+	for (j = 1; j < ARP_HALEN; j++) {
+		printf(":%02X", arptr->arhaddr[j]);
 	}
 	printf("\n");
-	return;
+}
+printf("\n");
+return;
 }

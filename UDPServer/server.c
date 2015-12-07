@@ -20,7 +20,8 @@ int main(void)
 	//create a UDP socket
 	if ((s=socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == -1)
 	{
-		printf("Error in socket");
+		printf("Error in socket\n");
+		exit(1);
 	}
 
 	// zero out the structure
@@ -33,7 +34,8 @@ int main(void)
 	//bind socket to port
 	if( bind(s , (struct sockaddr*)&sock_in, sizeof(sock_in) ) == -1)
 	{
-		printf("Error in bind");
+		printf("Error in bind\n");
+		exit(1);
 	}
 
 	printf("UDPServer has been started");
@@ -47,6 +49,7 @@ int main(void)
 		if ((recv_len = recvfrom(s, buf, BUF_SIZE, 0, (struct sockaddr *) &sock_remote, &slen)) == -1)
 		{
 			printf("Error in recvfrom()");
+			exit(1);
 		}
 
 		//print details of the client/peer and the data received
@@ -56,7 +59,8 @@ int main(void)
 		//now reply the client with the same data
 		if (sendto(s, buf, recv_len, 0, (struct sockaddr*) &sock_remote, slen) == -1)
 		{
-			printf("Error in sendto()");
+			printf("Error in sendto()\n");
+			exit(1);
 		}
 	}
 

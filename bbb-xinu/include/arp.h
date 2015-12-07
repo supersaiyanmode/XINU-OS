@@ -17,11 +17,16 @@
 
 #define	ARP_TIMEOUT	300		/* Retry timer in milliseconds	*/
 
+
 /* State of an ARP cache entry */
 
 #define	AR_FREE		0		/* Slot is unused		*/
 #define	AR_PENDING	1		/* Resolution in progress	*/
 #define	AR_RESOLVED	2		/* Entry is valid		*/
+#define AR_STALE	3		/* Entry has become stale	*/
+
+#define ARP_CACHE_TIMEOUT	60
+#define ARP_DEFAULT_TIMESTAMP	0
 
 #pragma pack(2)
 struct	arppacket {			/* ARP packet for IP & Ethernet	*/
@@ -47,4 +52,10 @@ struct	arpentry {			/* Entry in the ARP cache	*/
 	byte	arhaddr[ARP_HALEN];	/* Ethernet address of the entry*/
 };
 
+struct arpentry_aux {
+	uint32	timestamp;		/* Timestamp of when the arpentry was last used */
+};
+
+
 extern struct	arpentry arpcache[];
+extern struct	arpentry_aux arptimestamps[];

@@ -113,6 +113,7 @@ uid32	udp_register (
 			/* Request is already in the table */
 
 			restore(mask);
+			kprintf("Request already in table\n");
 			return SYSERR;
 		}
 	}
@@ -136,6 +137,7 @@ uid32	udp_register (
 	}
 
 	restore(mask);
+	kprintf("No free slot found\n");
 	return SYSERR;
 }
 

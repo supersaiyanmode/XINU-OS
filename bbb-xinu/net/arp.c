@@ -3,6 +3,19 @@
 #include <xinu.h>
 
 struct	arpentry  arpcache[ARP_SIZ];	/* ARP cache			*/
+struct	arpentry_aux	arptimestamps[ARP_SIZ];		/* Parallel table for timestamps */
+
+int arp_is_stale(int slot_id) {
+	return clktime - arptimestamps[slot_id]. timestamp > 
+			ARP_CACHE_TIMEOUT;
+}
+
+void print_ip(int ip) {
+	kprintf("%3d.", (ip & 0xFF000000)>>24);
+	kprintf("%3d.", (ip & 0x00FF0000)>>16);
+	kprintf("%3d.", (ip & 0x0000FF00)>>8);
+	kprintf("%3d.", (ip & 0x000000FF));
+}
 
 /*------------------------------------------------------------------------
  * arp_init  -  Initialize ARP cache for an Ethernet interface
@@ -14,6 +27,7 @@ void	arp_init(void)
 
 	for (i=1; i<ARP_SIZ; i++) {	/* Initialize cache to empty	*/
 		arpcache[i].arstate = AR_FREE;
+		arptimestamps[i].timestamp = ARP_DEFAULT_TIMESTAMP;
 	}
 }
 
@@ -22,9 +36,9 @@ void	arp_init(void)
  *------------------------------------------------------------------------
  */
 status	arp_resolve (
-	 uint32	nxthop,			/* Next-hop address to resolve	*/
-	 byte	mac[ETH_ADDR_LEN]	/* Array into which Ethernet	*/
-	)				/*   address should be placed	*/
+		uint32	nxthop,			/* Next-hop address to resolve	*/
+		byte	mac[ETH_ADDR_LEN]	/* Array into which Ethernet	*/
+		)				/*   address should be placed	*/
 {
 	intmask	mask;			/* Saved interrupt mask		*/
 	struct	arppacket apkt;		/* Local packet buffer		*/
@@ -67,10 +81,15 @@ status	arp_resolve (
 
 		/* If entry is resolved - handle and return */
 
-		if (arptr->arstate == AR_RESOLVED) {
+		if (arptr->arstate == AR_RESOLVED && !arp_is_stale(i)) {
 			memcpy(mac, arptr->arhaddr, ARP_HALEN);
 			restore(mask);
 			return OK;
+		}
+		else if (arp_is_stale(i)) {
+			//kprintf("Stale entry:");
+			//print_ip(arptr->arpaddr);
+			//kprintf("\n");
 		}
 
 		/* Entry is already pending -  return error because	*/
@@ -132,7 +151,7 @@ status	arp_resolve (
 			return SYSERR;
 		} else {	/* entry is resolved */
 			break;
- 		}
+		}
 	}
 
 	/* If no response, return TIMEOUT */
@@ -156,15 +175,19 @@ status	arp_resolve (
  *------------------------------------------------------------------------
  */
 void	arp_in (
-	  struct arppacket *pktptr	/* Ptr to incoming packet	*/
-	)
+		struct arppacket *pktptr	/* Ptr to incoming packet	*/
+	       )
 {
 	intmask	mask;			/* Saved interrupt mask		*/
 	struct	arppacket apkt;		/* Local packet buffer		*/
 	int32	slot;			/* Slot in cache		*/
 	struct	arpentry  *arptr;	/* Ptr to ARP cache entry	*/
 	bool8	found;			/* Is the sender's address in	*/
-					/*   the cache?			*/
+	/*   the cache?			*/
+
+	//kprintf("Got an ARP packet for:");
+	//print_ip(pktptr->arp_sndpa);
+	//kprintf("\n");
 
 	/* Convert packet from network order to host order */
 
@@ -173,7 +196,7 @@ void	arp_in (
 	/* Verify ARP is for IPv4 and Ethernet */
 
 	if ( (pktptr->arp_htype != ARP_HTYPE) ||
-	     (pktptr->arp_ptype != ARP_PTYPE) ) {
+			(pktptr->arp_ptype != ARP_PTYPE) ) {
 		freebuf((char *)pktptr);
 		return;
 	}
@@ -186,6 +209,7 @@ void	arp_in (
 
 	found = FALSE;
 
+	int slot_id = -1;
 	for (slot=0; slot < ARP_SIZ; slot++) {
 		arptr = &arpcache[slot];
 
@@ -199,6 +223,7 @@ void	arp_in (
 
 		if (arptr->arpaddr == pktptr->arp_sndpa) {
 			found = TRUE;
+			slot_id = slot;
 			break;
 		}
 	}
@@ -211,8 +236,14 @@ void	arp_in (
 
 		/* If a process was waiting, inform the process */
 
+		//kprintf("Above if condition. State: %d", arptr->arstate);
+		arptimestamps[slot_id].timestamp = clktime;
+
 		if (arptr->arstate == AR_PENDING) {
 			/* Mark resolved and notify waiting process */
+
+			//kprintf("Assigning timestamp of %u\n", clktime);
+
 			arptr->arstate = AR_RESOLVED;
 			send(arptr->arpid, OK);
 		}
@@ -251,6 +282,10 @@ void	arp_in (
 		arptr = &arpcache[slot];
 		arptr->arpaddr = pktptr->arp_sndpa;
 		memcpy(arptr->arhaddr, pktptr->arp_sndha, ARP_HALEN);
+
+
+		//kprintf("Assigning timestamp of %u\n", clktime);
+		arptimestamps[slot_id].timestamp = clktime;
 		arptr->arstate = AR_RESOLVED;
 	}
 
@@ -312,16 +347,20 @@ int32	arp_alloc ()
 	/* Search for a resolved entry */
 
 	for (slot=0; slot < ARP_SIZ; slot++) {
-		if (arpcache[slot].arstate == AR_RESOLVED) {
-			memset((char *)&arpcache[slot],
-					NULLCH, sizeof(struct arpentry));
-			return slot;
+		if (arpcache[slot].arstate == AR_RESOLVED || arpcache[slot].arstate == AR_STALE)
+		{
+
+			if((arptimestamps[slot].timestamp - clktime) > ARP_CACHE_TIMEOUT) 
+			{
+				memset((char *)&arpcache[slot],
+						NULLCH, sizeof(struct arpentry));
+				return slot;
+			}
 		}
 	}
-
 	/* At this point, all slots are pending (should not happen) */
 
-	kprintf("ARP cache size exceeded\n");
+	kprintf("No of the slots in ARP cache are free or expired\n");
 
 	return SYSERR;
 }
@@ -331,8 +370,8 @@ int32	arp_alloc ()
  *------------------------------------------------------------------------
  */
 void 	arp_ntoh(
-	struct arppacket *pktptr
-	)
+		struct arppacket *pktptr
+		)
 {
 	pktptr->arp_htype = ntohs(pktptr->arp_htype);
 	pktptr->arp_ptype = ntohs(pktptr->arp_ptype);
@@ -346,8 +385,8 @@ void 	arp_ntoh(
  *------------------------------------------------------------------------
  */
 void 	arp_hton(
-	struct arppacket *pktptr
-	)
+		struct arppacket *pktptr
+		)
 {
 	pktptr->arp_htype = htons(pktptr->arp_htype);
 	pktptr->arp_ptype = htons(pktptr->arp_ptype);
@@ -355,3 +394,4 @@ void 	arp_hton(
 	pktptr->arp_sndpa = htonl(pktptr->arp_sndpa);
 	pktptr->arp_tarpa = htonl(pktptr->arp_tarpa);
 }
+
