@@ -31,3 +31,8 @@ struct	udpentry {			/* Entry in the UDP endpoint tbl*/
 };
 
 extern	struct	udpentry udptab[];
+
+
+syscall udp_set_async(int slot, void (*fn)(char*, int));
+
+syscall udp_remove_async(int slot);

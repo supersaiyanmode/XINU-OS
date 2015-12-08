@@ -2,8 +2,18 @@
 /*	        udp_recv, udp_recvaddr, udp_release, udp_ntoh, udp_hton	*/
 
 #include <xinu.h>
+#include<future.h>
 
 struct	udpentry udptab[UDP_SLOTS];	/* Table of UDP endpoints	*/
+
+struct udpmeta {
+	volatile int future_enabled;
+	future *future_ptr;
+	void (*recv_fn)(char*, int);
+	pid32 child_process_id; 
+} ;
+
+struct udpmeta udp_metadata[UDP_SLOTS];
 
 /*------------------------------------------------------------------------
  * udp_init  -  Initialize all entries in the UDP endpoint table
@@ -11,14 +21,65 @@ struct	udpentry udptab[UDP_SLOTS];	/* Table of UDP endpoints	*/
  */
 void	udp_init(void)
 {
-
 	int32	i;			/* Index into the UDP table */
 
 	for(i=0; i<UDP_SLOTS; i++) {
 		udptab[i].udstate = UDP_FREE;
+		udp_metadata[i].future_enabled = 0;
+		udp_metadata[i].recv_fn = 0;
 	}
 
 	return;
+}
+
+void udp_reader(int slot) {
+	kprintf("Starting UDPReader\n");
+	while (udp_metadata[slot].future_enabled) {
+		int addr;
+		future_get(udp_metadata[slot].future_ptr, &addr);
+		kprintf("Got a packet from reader.\n");
+		struct netpacket *pktptr = (struct netpacket*) addr;
+		
+		char* data = (char*)pktptr->net_udpdata;
+		int len = pktptr->net_udplen - UDP_HDR_LEN;
+		void (*recv_fn)(char*, int) = udp_metadata[slot].recv_fn;
+		(*recv_fn)(data, len);
+	}
+}
+
+syscall udp_set_async(int slot, void (*fn)(char*, int)) {
+	intmask mask;
+
+	mask = disable();
+
+	udp_metadata[slot].future_enabled = 1;
+	udp_metadata[slot].recv_fn = fn;
+	udp_metadata[slot].future_ptr = future_alloc(FUTURE_EXCLUSIVE);
+
+	udp_metadata[slot].child_process_id = create(udp_reader, 1024, 20, "UDPReader", 1, slot);
+	restore(mask);
+	resume(udp_metadata[slot].child_process_id);
+	return OK;
+}
+
+syscall udp_remove_async(int slot) {
+
+	intmask mask;
+
+	mask = disable();
+
+	if(!udp_metadata[slot].future_enabled)
+	{
+		restore(mask);
+		return SYSERR;
+	}
+
+	udp_metadata[slot].future_enabled = 0;
+	udp_metadata[slot].recv_fn = NULL;
+	future_free(udp_metadata[slot].future_ptr);
+
+	restore(mask);
+	return OK;
 }
 
 
@@ -27,8 +88,8 @@ void	udp_init(void)
  *------------------------------------------------------------------------
  */
 void	udp_in(
-	  struct netpacket *pktptr	/* Pointer to the packet	*/
-	)
+		struct netpacket *pktptr	/* Pointer to the packet	*/
+	      )
 {
 	intmask	mask;			/* Saved interrupt mask		*/
 	int32	i;			/* Index into udptab		*/
@@ -40,33 +101,48 @@ void	udp_in(
 	mask = disable();
 
 	for (i=0; i<UDP_SLOTS; i++) {
-	    udptr = &udptab[i];
-	    if (udptr->udstate == UDP_FREE) {
+		udptr = &udptab[i];
+		if (udptr->udstate == UDP_FREE) {
 			continue;
-	    }
-
-	    if ((pktptr->net_udpdport == udptr->udlocport)  &&
-                    ((udptr->udremport == 0) ||
-                        (pktptr->net_udpsport == udptr->udremport)) &&
-                 (  ((udptr->udremip==0)     ||
-                        (pktptr->net_ipsrc == udptr->udremip)))    ) {
-
-		/* Entry matches incoming packet */
-
-		if (udptr->udcount < UDP_QSIZ) {
-			udptr->udcount++;
-			udptr->udqueue[udptr->udtail++] = pktptr;
-			if (udptr->udtail >= UDP_QSIZ) {
-				udptr->udtail = 0;
-			}
-			if (udptr->udstate == UDP_RECV) {
-				udptr->udstate = UDP_USED;
-				send (udptr->udpid, OK);
-			}
-			restore(mask);
-			return;
 		}
-	    }
+
+		/*kprintf("\nUDP destination port is %u\n", udptr->udlocport);
+		kprintf("Packet destination port is %u\n", pktptr->net_udpdport);
+		kprintf("UDP source port is %u\n", udptr->udremport);
+		kprintf("Packet source port is %u\n", pktptr->net_udpsport);
+		kprintf("UDP destination IP is %u\n", udptr->udremip);
+		kprintf("Packet destination IP is %u\n", pktptr->net_ipsrc);
+		*/
+		if ((pktptr->net_udpdport == udptr->udlocport)  &&
+				((udptr->udremport == 0) ||
+				 (pktptr->net_udpsport == udptr->udremport)) &&
+				(  ((udptr->udremip==0)     ||
+				    (pktptr->net_ipsrc == udptr->udremip)))    ) {
+
+			/* Entry matches incoming packet */
+			kprintf("Futures enabled: %d\n", udp_metadata[i].future_enabled);
+			if(udp_metadata[i].future_enabled == 1)	{
+				kprintf("Got a packet meant for future: %x\n", pktptr);
+				int *res = (int*)getmem(sizeof(int));
+				*res = (int)pktptr;
+				future_set(udp_metadata[i].future_ptr, res);
+				restore(mask);
+				return;
+			}
+			else if (udptr->udcount < UDP_QSIZ) {
+				udptr->udcount++;
+				udptr->udqueue[udptr->udtail++] = pktptr;
+				if (udptr->udtail >= UDP_QSIZ) {
+					udptr->udtail = 0;
+				}
+				if (udptr->udstate == UDP_RECV) {
+					udptr->udstate = UDP_USED;
+					send (udptr->udpid, OK);
+				}
+				restore(mask);
+				return;
+			}
+		}
 	}
 
 	/* No match - simply discard packet */
@@ -83,10 +159,10 @@ void	udp_in(
  *------------------------------------------------------------------------
  */
 uid32	udp_register (
-	 uint32	remip,			/* Remote IP address or zero	*/
-	 uint16	remport,		/* Remote UDP protocol port	*/
-	 uint16	locport			/* Local UDP protocol port	*/
-	)
+		uint32	remip,			/* Remote IP address or zero	*/
+		uint16	remport,		/* Remote UDP protocol port	*/
+		uint16	locport			/* Local UDP protocol port	*/
+		)
 {
 	intmask	mask;			/* Saved interrupt mask		*/
 	int32	slot;			/* Index into udptab		*/
@@ -107,8 +183,8 @@ uid32	udp_register (
 		/* Look at this entry in table */
 
 		if ( (remport == udptr->udremport) &&
-		     (locport == udptr->udlocport) &&
-		     (remip   == udptr->udremip  ) ) {
+				(locport == udptr->udlocport) &&
+				(remip   == udptr->udremip  ) ) {
 
 			/* Request is already in the table */
 
@@ -146,11 +222,11 @@ uid32	udp_register (
  *------------------------------------------------------------------------
  */
 int32	udp_recv (
-	 uid32	slot,			/* Slot in table to use		*/
-	 char   *buff,			/* Buffer to hold UDP data	*/
-	 int32	len,			/* Length of buffer		*/
-	 uint32	timeout			/* Read timeout in msec		*/
-	)
+		uid32	slot,			/* Slot in table to use		*/
+		char   *buff,			/* Buffer to hold UDP data	*/
+		int32	len,			/* Length of buffer		*/
+		uint32	timeout			/* Read timeout in msec		*/
+		)
 {
 	intmask	mask;			/* Saved interrupt mask		*/
 	struct	udpentry *udptr;	/* Pointer to udptab entry	*/
@@ -227,13 +303,13 @@ int32	udp_recv (
  *------------------------------------------------------------------------
  */
 int32	udp_recvaddr (
-	 uid32	slot,			/* Slot in table to use		*/
-	 uint32	*remip,			/* Loc for remote IP address	*/
-	 uint16	*remport,		/* Loc for remote protocol port	*/
-	 char   *buff,			/* Buffer to hold UDP data	*/
-	 int32	len,			/* Length of buffer		*/
-	 uint32	timeout			/* Read timeout in msec		*/
-	)
+		uid32	slot,			/* Slot in table to use		*/
+		uint32	*remip,			/* Loc for remote IP address	*/
+		uint16	*remport,		/* Loc for remote protocol port	*/
+		char   *buff,			/* Buffer to hold UDP data	*/
+		int32	len,			/* Length of buffer		*/
+		uint32	timeout			/* Read timeout in msec		*/
+		)
 {
 	intmask	mask;			/* Saved interrupt mask		*/
 	struct	udpentry *udptr;	/* Pointer to udptab entry	*/
@@ -316,10 +392,10 @@ int32	udp_recvaddr (
  *------------------------------------------------------------------------
  */
 status	udp_send (
-	 uid32	slot,			/* Table slot to use		*/
-	 char   *buff,			/* Buffer of UDP data		*/
-	 int32	len			/* Length of data in buffer	*/
-	)
+		uid32	slot,			/* Table slot to use		*/
+		char   *buff,			/* Buffer of UDP data		*/
+		int32	len			/* Length of data in buffer	*/
+		)
 {
 	intmask	mask;			/* Saved interrupt mask		*/
 	struct	netpacket *pkt;		/* Pointer to packet buffer	*/
@@ -330,7 +406,7 @@ status	udp_send (
 	uint16	remport;		/* Remote protocol port to use	*/
 	uint16	locport;		/* Local protocol port to use	*/
 	uint32	locip;			/* Local IP address taken from	*/
-					/*   the interface		*/
+	/*   the interface		*/
 	struct	udpentry *udptr;	/* Pointer to table entry	*/
 
 	/* Ensure only one process can access the UDP table at a time	*/
@@ -417,12 +493,12 @@ status	udp_send (
  *------------------------------------------------------------------------
  */
 status	udp_sendto (
-	 uid32	slot,			/* UDP table slot to use	*/
-	 uint32	remip,			/* Remote IP address to use	*/
-	 uint16	remport,		/* Remote protocol port to use	*/
-	 char   *buff,			/* Buffer of UDP data		*/
-	 int32	len			/* Length of data in buffer	*/
-	)
+		uid32	slot,			/* UDP table slot to use	*/
+		uint32	remip,			/* Remote IP address to use	*/
+		uint16	remport,		/* Remote protocol port to use	*/
+		char   *buff,			/* Buffer of UDP data		*/
+		int32	len			/* Length of data in buffer	*/
+		)
 {
 	intmask	mask;			/* Saved interrupt mask		*/
 	struct	netpacket *pkt;		/* Pointer to a packet buffer	*/
@@ -469,7 +545,7 @@ status	udp_sendto (
 	/* Create UDP packet in pkt */
 
 	memcpy((char *)pkt->net_ethsrc,NetData.ethucast,ETH_ADDR_LEN);
-        pkt->net_ethtype = 0x0800;	/* Type is IP */
+	pkt->net_ethtype = 0x0800;	/* Type is IP */
 	pkt->net_ipvh = 0x45;		/* IP version and hdr length	*/
 	pkt->net_iptos = 0x00;		/* Type of service		*/
 	pkt->net_iplen= pktlen - ETH_HDR_LEN;/* total IP datagram length*/
@@ -502,8 +578,8 @@ status	udp_sendto (
  *------------------------------------------------------------------------
  */
 status	udp_release (
-	 uid32	slot			/* Table slot to release	*/
-	)
+		uid32	slot			/* Table slot to release	*/
+		)
 {
 	intmask	mask;			/* Saved interrupt mask		*/
 	struct	udpentry *udptr;	/* Pointer to udptab entry	*/
@@ -553,8 +629,8 @@ status	udp_release (
  *------------------------------------------------------------------------
  */
 void 	udp_ntoh(
-	  struct netpacket *pktptr
-	)
+		struct netpacket *pktptr
+		)
 {
 	pktptr->net_udpsport = ntohs(pktptr->net_udpsport);
 	pktptr->net_udpdport = ntohs(pktptr->net_udpdport);
@@ -567,8 +643,8 @@ void 	udp_ntoh(
  *------------------------------------------------------------------------
  */
 void 	udp_hton(
-	  struct netpacket *pktptr
-	)
+		struct netpacket *pktptr
+		)
 {
 	pktptr->net_udpsport = htons(pktptr->net_udpsport);
 	pktptr->net_udpdport = htons(pktptr->net_udpdport);
