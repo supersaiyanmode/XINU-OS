@@ -125,7 +125,10 @@ void	udp_in(
 				kprintf("Got a packet meant for future: %x\n", pktptr);
 				int *res = (int*)getmem(sizeof(int));
 				*res = (int)pktptr;
-				future_set(udp_metadata[i].future_ptr, res);
+
+				if(future_set(udp_metadata[i].future_ptr, res) == SYSERR)
+					freebuf((char *) pktptr);
+
 				restore(mask);
 				return;
 			}
