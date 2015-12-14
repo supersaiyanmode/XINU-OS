@@ -9,7 +9,28 @@
 #define clearmaskbit fs_clearmaskbit
 #define setmaskbit fs_setmaskbit
 #define printfreemask fs_printfreemask
-void testbitmask(void);
+#define testbitmask fs_testbitmask
+void fs_testbitmask(void) {
+    setmaskbit(31); setmaskbit(95); setmaskbit(159);setmaskbit(223);
+    setmaskbit(287); setmaskbit(351); setmaskbit(415);setmaskbit(479);
+    setmaskbit(90); setmaskbit(154);setmaskbit(218); setmaskbit(282);
+    setmaskbit(346); setmaskbit(347); setmaskbit(348); setmaskbit(349);
+    setmaskbit(350); setmaskbit(100); setmaskbit(164);setmaskbit(228);
+    setmaskbit(292); setmaskbit(356); setmaskbit(355); setmaskbit(354);
+    setmaskbit(353); setmaskbit(352);
+    
+    printfreemask();
+
+    clearmaskbit(31); clearmaskbit(95); clearmaskbit(159);clearmaskbit(223);
+    clearmaskbit(287); clearmaskbit(351); clearmaskbit(415);clearmaskbit(479);
+    clearmaskbit(90); clearmaskbit(154);clearmaskbit(218); clearmaskbit(282);
+    clearmaskbit(346); clearmaskbit(347); clearmaskbit(348); clearmaskbit(349);
+    clearmaskbit(350); clearmaskbit(100); clearmaskbit(164);clearmaskbit(228);
+    clearmaskbit(292); clearmaskbit(356); clearmaskbit(355); clearmaskbit(354);
+    clearmaskbit(353); clearmaskbit(352);
+
+    printfreemask();
+}
 
 /**
  * @ingroup shell
@@ -57,10 +78,10 @@ void testbitmask(void);
 
     bs_mkdev(0, MDEV_BLOCK_SIZE, MDEV_NUM_BLOCKS); /* device "0" and default blocksize (=0) and count */
     fs_mkfs(0,DEFAULT_NUM_INODES); /* bsdev 0*/
-    fs_testbitmask();
+    testbitmask();
     
-    buf1 = memget(SIZE*sizeof(char));
-    buf2 = memget(SIZE*sizeof(char));
+    buf1 = getmem(SIZE*sizeof(char));
+    buf2 = getmem(SIZE*sizeof(char));
     
     // Create test file
     fd = fs_create("Test_File", O_CREAT);
@@ -103,8 +124,8 @@ void testbitmask(void);
     }
 
 clean_up:
-    memfree(buf1,SIZE);
-    memfree(buf2,SIZE);
+    freemem(buf1,SIZE);
+    freemem(buf2,SIZE);
     
 #else
     printf("No filesystem support\n");
@@ -113,28 +134,4 @@ clean_up:
     return OK;
 }
 
-void
-testbitmask(void) {
-/*
-    setmaskbit(31); setmaskbit(95); setmaskbit(159);setmaskbit(223);
-    setmaskbit(287); setmaskbit(351); setmaskbit(415);setmaskbit(479);
-    setmaskbit(90); setmaskbit(154);setmaskbit(218); setmaskbit(282);
-    setmaskbit(346); setmaskbit(347); setmaskbit(348); setmaskbit(349);
-    setmaskbit(350); setmaskbit(100); setmaskbit(164);setmaskbit(228);
-    setmaskbit(292); setmaskbit(356); setmaskbit(355); setmaskbit(354);
-    setmaskbit(353); setmaskbit(352);
-    
-    printfreemask();
-
-    clearmaskbit(31); clearmaskbit(95); clearmaskbit(159);clearmaskbit(223);
-    clearmaskbit(287); clearmaskbit(351); clearmaskbit(415);clearmaskbit(479);
-    clearmaskbit(90); clearmaskbit(154);clearmaskbit(218); clearmaskbit(282);
-    clearmaskbit(346); clearmaskbit(347); clearmaskbit(348); clearmaskbit(349);
-    clearmaskbit(350); clearmaskbit(100); clearmaskbit(164);clearmaskbit(228);
-    clearmaskbit(292); clearmaskbit(356); clearmaskbit(355); clearmaskbit(354);
-    clearmaskbit(353); clearmaskbit(352);
-
-    printfreemask();
-*/
-}
 
