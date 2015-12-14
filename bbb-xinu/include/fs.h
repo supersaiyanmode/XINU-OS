@@ -27,6 +27,7 @@ struct inode {
   short int nlink;
   int device;
   int size;
+  int next_free_block;
   int blocks[INODEBLOCKS];
 };
 
@@ -36,6 +37,7 @@ struct inode {
 struct filetable {
   int state;
   int fileptr;
+  int flags;
   struct dirent *de;
   struct inode in;
 };
@@ -63,6 +65,7 @@ struct fsystem {
 /* file and directory functions */
 int fs_open(char *filename, int flags);
 int fs_close(int fd);
+int fs_delete(char* filename);
 int fs_create(char *filename, int mode);
 int fs_seek(int fd, int offset);
 int fs_read(int fd, void *buf, int nbytes);
