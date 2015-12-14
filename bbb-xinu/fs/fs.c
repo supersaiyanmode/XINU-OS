@@ -228,6 +228,7 @@ int fs_close(int fd) {
 }
 
 int fs_read(int fd, void* buf, int len) {
+  char *buffer = (char*)buf;
   intmask mask = disable();
   
   if (oft[fd].state != FSTATE_OPEN) {
@@ -235,6 +236,18 @@ int fs_read(int fd, void* buf, int len) {
     return SYSERR;
   }
 
+  struct inode inode_obj;
+  fs_get_inode_by_num(0, inode, &inode_obj);
+  
+  while (len > 0 && oft[fd].fileptr < inode_obj.size) {
+    int cur_block = oft[fd].fileptr / fsd.blocksz;
+    int offset = oft[ft].fileptr % fsd.blocksz;
+
+    int more_bytes = inode_obj.size - oft[ft].fileptr - 1;
+    int more_bytes_block = offset;
+
+    s
+  }
 
   restore(mask);
   return 0;
