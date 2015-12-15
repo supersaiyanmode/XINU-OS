@@ -243,13 +243,13 @@ int fs_read(int fd, void* buf, int len) {
   
   while (len > 0 && oft[fd].fileptr < inode_obj.size) {
     int cur_block = oft[fd].fileptr / fsd.blocksz;
-    int offset = oft[ft].fileptr % fsd.blocksz;
+    int offset = oft[fd].fileptr % fsd.blocksz;
 
-    int more_bytes = inode_obj.size - oft[ft].fileptr + 1;
+    int more_bytes = inode_obj.size - oft[fd].fileptr + 1;
     int more_bytes_block = fsd.blocksz - offset;
     
     int bytes_to_read = more_bytes_block > more_bytes? more_bytes: more_bytes_block;
-    int disk_block = FIRST_DATA_BLOCK + inode_obj[cur_block];
+    int disk_block = FIRST_DATA_BLOCK + inode_obj.blocks[cur_block];
 
     bs_bread(dev0, disk_block, 0, &block_cache[0], fsd.blocksz);
     memcpy(buffer, &block_cache[offset], bytes_to_read);
@@ -284,7 +284,7 @@ int fs_write(int fd, void *buf, int len) {
   char *buffer = (char*)buf;
   intmask mask = disable();
 
-  if (oft[fs].state != FSTATE_OPEN) {
+  if (oft[fd].state != FSTATE_OPEN) {
     restore(mask);
     return SYSERR;
   }
@@ -300,7 +300,7 @@ int fs_write(int fd, void *buf, int len) {
     if (oft[fd].fileptr < inode_obj.size) {
       int more_bytes_block = fsd.blocksz - offset;
       bytes_to_write = more_bytes_block > len ? len: more_bytes_block;
-      disk_block = FIRST_DATA_BLOCK + inode_obj[cur_block];
+      disk_block = FIRST_DATA_BLOCK + inode_obj.blocks[cur_block];
     } else {
       bytes_to_write = fsd.blocksz > len ? len : fsd.blocksz;
       int new_disk_block = get_next_free_block();
