@@ -74,7 +74,9 @@ void fs_testbitmask(void) {
         return SYSERR;
     }
 
+    kprintf("Value of FS: %d\n", FS); 
 #ifdef FS
+    
 
     bs_mkdev(0, MDEV_BLOCK_SIZE, MDEV_NUM_BLOCKS); /* device "0" and default blocksize (=0) and count */
     fs_mkfs(0,DEFAULT_NUM_INODES); /* bsdev 0*/
@@ -100,6 +102,7 @@ void fs_testbitmask(void) {
         printf("\n\r File write failed");
         goto clean_up;
     }
+    kprintf("Done writing to file.\n");
 
     // Now my file offset is pointing at EOF file, i need to bring it back to start of file
     // Assuming here implementation of fs_seek is like "original_offset = original_offset + input_offset_from_fs_seek"

@@ -35,6 +35,7 @@ int fs_fileblock_to_diskblock(int dev, int fd, int fileblock);
 
 
 int get_next_free_block() {
+  kprintf("Gerring the next free block\n");
   int i = 0;
   for (; i < fsd.nblocks; i++) {
     if (fs_getmaskbit(i) == 0)
@@ -44,6 +45,7 @@ int get_next_free_block() {
 }
 
 int get_filename_index(char *filename) {
+  kprintf("Getting the file name index.\n");
   intmask mask = disable();
   int i = 0;
   for (; i < fsd.root_dir.numentries; i++) {
@@ -58,6 +60,7 @@ int get_filename_index(char *filename) {
 }
 
 int get_fd_by_inode(int inode) {
+
   intmask mask = disable();
   int i = 0;
   for (; i < NUM_FD; i++) {
@@ -240,6 +243,7 @@ int fs_read(int fd, void* buf, int len) {
 
   struct inode inode_obj;
   fs_get_inode_by_num(0, oft[fd].in.id, &inode_obj);
+  int total_bytes_read = 0;
   
   while (len > 0 && oft[fd].fileptr < inode_obj.size) {
     int cur_block = oft[fd].fileptr / fsd.blocksz;
@@ -257,7 +261,14 @@ int fs_read(int fd, void* buf, int len) {
     buffer += bytes_to_read;
     len -= bytes_to_read;
     oft[fd].fileptr += bytes_to_read;
+    total_bytes_read += bytes_to_read;
   }
+  kprintf("Read: ");
+  int i;
+  for (i=0; i<total_bytes_read; i++) {
+    kprintf("(%d|%c) ", (int)buffer[i], buffer[i]);
+  }
+  kprintf("\n");
 
   restore(mask);
   return 0;
@@ -290,7 +301,7 @@ int fs_write(int fd, void *buf, int len) {
   }
   struct inode inode_obj;
   fs_get_inode_by_num(0, oft[fd].in.id, &inode_obj);
-
+  int total_bytes_written = 0;
   while (len > 0) {
     int cur_block = oft[fd].fileptr / fsd.blocksz;
     int offset = oft[fd].fileptr % fsd.blocksz;
@@ -318,9 +329,9 @@ int fs_write(int fd, void *buf, int len) {
     len -= bytes_to_write;
     buffer += bytes_to_write;
     oft[fd].fileptr += bytes_to_write;
-
+    total_bytes_written += bytes_to_write;
   }
-  return 0;
+  return total_bytes_written;
 }
 
 int fs_fileblock_to_diskblock(int dev, int fd, int fileblock) {
