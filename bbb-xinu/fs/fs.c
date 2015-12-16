@@ -237,7 +237,7 @@ int fs_create(char* filename, int flags) {
     return SYSERR;
   }
 
-  print_oft(fd);
+  //print_oft(fd);
 
   restore(mask);
   return fd;
@@ -267,7 +267,7 @@ int fs_read(int fd, void* buf, int len) {
     return SYSERR;
   }
 
-  print_oft(fd);
+  //print_oft(fd);
   struct inode inode_obj;
   fs_get_inode_by_num(0, oft[fd].in.id, &inode_obj);
 
@@ -372,8 +372,6 @@ int fs_write(int fd, void *buf, int len) {
   bs_bwrite(dev0, SB_BLK, 0, &fsd, sizeof(struct fsystem));
   bs_bwrite(dev0, BM_BLK, 0, fsd.freemask, fsd.freemaskbytes);
   fs_put_inode_by_num(dev0, inode_obj.id, &inode_obj);
-
-  print_inode(&inode_obj);
 
   return total_bytes_written;
 }
