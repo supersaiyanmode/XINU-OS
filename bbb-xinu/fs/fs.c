@@ -33,9 +33,33 @@ int next_open_fd = 0;
 
 int fs_fileblock_to_diskblock(int dev, int fd, int fileblock);
 
+void knprintf(char *s, int l) {
+  intmask mask = disable();
+  int i=0;
+  for (i=0; i<l; i++)
+    kprintf("%c", s[i]);
+ restore(mask);
+}
+
+void print_inode(struct inode* in) {
+  kprintf("INode: %d\n", in->id);
+  kprintf("size: %d\n", in->size);
+  kprintf("blocks:");
+  
+  int i=0;
+  for (; i<in->next_free_block; i++) {
+    kprintf(" %d,", in->blocks[i]);
+  }
+  kprintf("\n");
+}
+
+void print_oft(int fd) {
+  kprintf("state of fd=%d: %d\n", fd, oft[fd].state);
+  kprintf("fileptr: %d\n", oft[fd].fileptr);
+  kprintf("Inode number: %d\n", oft[fd].in);
+}
 
 int get_next_free_block() {
-  kprintf("Gerring the next free block\n");
   int i = 0;
   for (; i < fsd.nblocks; i++) {
     if (fs_getmaskbit(i) == 0)
@@ -45,7 +69,6 @@ int get_next_free_block() {
 }
 
 int get_filename_index(char *filename) {
-  kprintf("Getting the file name index.\n");
   intmask mask = disable();
   int i = 0;
   for (; i < fsd.root_dir.numentries; i++) {
@@ -213,6 +236,9 @@ int fs_create(char* filename, int flags) {
     restore(mask);
     return SYSERR;
   }
+
+  print_oft(fd);
+
   restore(mask);
   return fd;
 }
@@ -241,10 +267,13 @@ int fs_read(int fd, void* buf, int len) {
     return SYSERR;
   }
 
+  print_oft(fd);
   struct inode inode_obj;
   fs_get_inode_by_num(0, oft[fd].in.id, &inode_obj);
+
+  print_inode(&inode_obj);
+
   int total_bytes_read = 0;
-  
   while (len > 0 && oft[fd].fileptr < inode_obj.size) {
     int cur_block = oft[fd].fileptr / fsd.blocksz;
     int offset = oft[fd].fileptr % fsd.blocksz;
@@ -262,16 +291,11 @@ int fs_read(int fd, void* buf, int len) {
     len -= bytes_to_read;
     oft[fd].fileptr += bytes_to_read;
     total_bytes_read += bytes_to_read;
-  }
-  kprintf("Read: ");
-  int i;
-  for (i=0; i<total_bytes_read; i++) {
-    kprintf("(%d|%c) ", (int)buffer[i], buffer[i]);
-  }
-  kprintf("\n");
 
+    knprintf(block_cache, fsd.blocksz);
+  }
   restore(mask);
-  return 0;
+  return total_bytes_read;
 }
 
 int fs_seek(int fd, int offset) {
@@ -302,6 +326,7 @@ int fs_write(int fd, void *buf, int len) {
   struct inode inode_obj;
   fs_get_inode_by_num(0, oft[fd].in.id, &inode_obj);
   int total_bytes_written = 0;
+  int size_increase = 0;
   while (len > 0) {
     int cur_block = oft[fd].fileptr / fsd.blocksz;
     int offset = oft[fd].fileptr % fsd.blocksz;
@@ -315,22 +340,41 @@ int fs_write(int fd, void *buf, int len) {
     } else {
       bytes_to_write = fsd.blocksz > len ? len : fsd.blocksz;
       int new_disk_block = get_next_free_block();
+      
+      size_increase += bytes_to_write;
+
       inode_obj.blocks[inode_obj.next_free_block] = new_disk_block;
       inode_obj.next_free_block++;
+
+      fsd.inodes_used++;
       fs_setmaskbit(new_disk_block);
-      bs_bwrite(dev0, SB_BLK, 0, &fsd, sizeof(struct fsystem));
-      fs_put_inode_by_num(dev0, inode_obj.id, &inode_obj);
       disk_block = FIRST_DATA_BLOCK + new_disk_block;
     }
+
+    
     bs_bread(dev0, disk_block, 0, &block_cache[0], fsd.blocksz);
-    memcpy(&block_cache[offset], buf, bytes_to_write);
+    memcpy(&block_cache[offset], buffer, bytes_to_write);
     bs_bwrite(dev0, disk_block, 0, &block_cache[0], fsd.blocksz);
-      
+
+    //kprintf("Written %d bytes to block num: %d\n", bytes_to_write, disk_block);
+    //kprintf("Data:\n");
+    //knprintf(block_cache, fsd.blocksz);
+    //kprintf("\n");
+     
     len -= bytes_to_write;
     buffer += bytes_to_write;
     oft[fd].fileptr += bytes_to_write;
     total_bytes_written += bytes_to_write;
   }
+
+  inode_obj.size += size_increase;
+  
+  bs_bwrite(dev0, SB_BLK, 0, &fsd, sizeof(struct fsystem));
+  bs_bwrite(dev0, BM_BLK, 0, fsd.freemask, fsd.freemaskbytes);
+  fs_put_inode_by_num(dev0, inode_obj.id, &inode_obj);
+
+  print_inode(&inode_obj);
+
   return total_bytes_written;
 }
 
